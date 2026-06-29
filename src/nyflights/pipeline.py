@@ -22,7 +22,12 @@ class ProjectConfig:
 
     project_name: str
     default_dataset: str
-    optional_domain_columns: tuple[str, ...] = ("dep_delay", "arr_delay", "dest", "carrier")
+    optional_domain_columns: tuple[str, ...] = (
+        "dep_delay",
+        "arr_delay",
+        "dest",
+        "carrier",
+    )
 
 
 CONFIG = ProjectConfig(
@@ -43,7 +48,9 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return cleaned
 
 
-def load_dataset(path: str | Path, required_columns: Sequence[str] = ()) -> pd.DataFrame:
+def load_dataset(
+    path: str | Path, required_columns: Sequence[str] = ()
+) -> pd.DataFrame:
     """Load a CSV or Excel dataset and validate required columns when provided."""
     dataset_path = Path(path)
     if not dataset_path.exists():
@@ -68,9 +75,15 @@ def load_dataset(path: str | Path, required_columns: Sequence[str] = ()) -> pd.D
 def missing_summary(df: pd.DataFrame) -> pd.DataFrame:
     """Build a column-level null-count and null-percentage summary."""
     total_rows = len(df)
-    summary = pd.DataFrame({"column": df.columns, "missing_count": df.isna().sum().values})
-    summary["missing_pct"] = 0.0 if total_rows == 0 else summary["missing_count"] / total_rows
-    return summary.sort_values(["missing_count", "column"], ascending=[False, True]).reset_index(drop=True)
+    summary = pd.DataFrame(
+        {"column": df.columns, "missing_count": df.isna().sum().values}
+    )
+    summary["missing_pct"] = (
+        0.0 if total_rows == 0 else summary["missing_count"] / total_rows
+    )
+    return summary.sort_values(
+        ["missing_count", "column"], ascending=[False, True]
+    ).reset_index(drop=True)
 
 
 def duplicate_summary(df: pd.DataFrame) -> dict[str, int]:
@@ -90,7 +103,10 @@ def delay_summary(df: pd.DataFrame) -> pd.DataFrame:
     """Return flight-delay aggregates when the nyflights columns are available."""
     required = {"dest", "dep_delay"}
     if not required.issubset(df.columns):
-        LOGGER.info("Skipping delay summary; missing optional columns: %s", sorted(required - set(df.columns)))
+        LOGGER.info(
+            "Skipping delay summary; missing optional columns: %s",
+            sorted(required - set(df.columns)),
+        )
         return pd.DataFrame()
 
     summary = (
@@ -107,7 +123,9 @@ def delay_summary(df: pd.DataFrame) -> pd.DataFrame:
     return summary
 
 
-def run_pipeline(input_path: str | Path, output_dir: str | Path = "data/processed") -> dict[str, Any]:
+def run_pipeline(
+    input_path: str | Path, output_dir: str | Path = "data/processed"
+) -> dict[str, Any]:
     """Run local profiling and optional flight-delay summaries for an available dataset."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -122,17 +140,27 @@ def run_pipeline(input_path: str | Path, output_dir: str | Path = "data/processe
     numeric.to_csv(output_path / "numeric_summary.csv", index=False)
     if not delays.empty:
         delays.to_csv(output_path / "delay_summary_by_destination.csv", index=False)
-    (output_path / "dataset_metrics.json").write_text(json.dumps(duplicates, indent=2), encoding="utf-8")
+    (output_path / "dataset_metrics.json").write_text(
+        json.dumps(duplicates, indent=2), encoding="utf-8"
+    )
 
     LOGGER.info("Pipeline completed for %s", CONFIG.project_name)
-    return {"rows": duplicates["row_count"], "duplicate_rows": duplicates["duplicate_rows"], "outputs": str(output_path)}
+    return {
+        "rows": duplicates["row_count"],
+        "duplicate_rows": duplicates["duplicate_rows"],
+        "outputs": str(output_path),
+    }
 
 
 def build_parser() -> argparse.ArgumentParser:
     """Create the command-line parser."""
     parser = argparse.ArgumentParser(description=CONFIG.project_name)
-    parser.add_argument("--input", required=True, help="Path to the raw CSV or Excel file.")
-    parser.add_argument("--output", default="data/processed", help="Directory for generated artifacts.")
+    parser.add_argument(
+        "--input", required=True, help="Path to the raw CSV or Excel file."
+    )
+    parser.add_argument(
+        "--output", default="data/processed", help="Directory for generated artifacts."
+    )
     return parser
 
 

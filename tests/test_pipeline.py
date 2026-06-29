@@ -10,7 +10,9 @@ from nyflights.pipeline import load_dataset, missing_summary, run_pipeline
 
 def test_load_dataset_normalizes_columns(tmp_path):
     dataset = tmp_path / "sample.csv"
-    pd.DataFrame({"Flight Delay": [10, None], "Carrier": ["AA", "DL"]}).to_csv(dataset, index=False)
+    pd.DataFrame({"Flight Delay": [10, None], "Carrier": ["AA", "DL"]}).to_csv(
+        dataset, index=False
+    )
 
     df = load_dataset(dataset)
 
