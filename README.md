@@ -1,10 +1,17 @@
 # NYC Flights - Flight Delay Analysis
 
-Professionalized data project for analyzing flight delays in New York airport data. The original notebook remains available, and reusable Python code now lives under `src/`.
+This repository contains an exploratory notebook about New York flight delays and a new lightweight Python profiling layer under `src/nyflights/`.
 
-## Staff Data Engineer assessment
+## What this PR changes
 
-This is a useful junior portfolio project because it starts from concrete operational questions and turns raw flight records into delay indicators. The main gap was project engineering: the logic lived only in a notebook and there was no reproducible package, test surface or dependency file.
+The notebook is still the source of the full analysis. The Python code added in this PR does not claim to reproduce every chart or business question from the notebook. It provides a safer project structure around the original work:
+
+- local CSV/Excel ingestion with explicit errors;
+- normalized column names;
+- missing-value and numeric profiling outputs;
+- duplicate-row metrics;
+- an optional `delay_summary_by_destination.csv` when the dataset includes `dest` and `dep_delay`;
+- tests for the reusable ingestion and profiling functions.
 
 ## Repository structure
 
@@ -17,23 +24,16 @@ This is a useful junior portfolio project because it starts from concrete operat
 ├── images/
 ├── notebooks/
 ├── src/nyflights/
-│   ├── __init__.py
-│   └── pipeline.py
 ├── tests/
-│   └── test_pipeline.py
 ├── requirements.txt
 └── README.md
 ```
 
-## What changed
+## Dataset requirement
 
-- Added a Python package with typed, logged and documented pipeline functions.
-- Added data-quality outputs for missing values, numeric summaries and duplicates.
-- Added tests for ingestion, column normalization and artifact generation.
-- Added conventional `data`, `images`, `notebooks` and `tests` folders.
-- Added `.gitignore`, `requirements.txt` and MIT `LICENSE`.
+The pipeline expects a local file such as `data/raw/nyflights.csv`. That file is not committed to this repository. Without the dataset, you can inspect the code and run unit tests, but you cannot execute the project pipeline end to end.
 
-## How to run
+## How to run when the dataset is available
 
 ```bash
 python -m venv .venv
@@ -45,17 +45,21 @@ python -m nyflights.pipeline --input data/raw/nyflights.csv --output data/proces
 
 On Linux/macOS, replace the activation command with `source .venv/bin/activate`.
 
-## Dataset
+## Outputs
 
-The expected input file is `data/raw/nyflights.csv`. The dataset is not committed to the repository, so place it locally before running the pipeline.
+Always generated when the input file exists:
 
-## Original analysis
+- `data/processed/missing_summary.csv`
+- `data/processed/numeric_summary.csv`
+- `data/processed/dataset_metrics.json`
 
-The original notebook answers questions about long delays, descriptive statistics, destination behavior and derived flight metrics. The new Python pipeline does not remove that work; it extracts reusable project infrastructure around the analysis.
+Generated only when the expected flight-delay columns exist:
+
+- `data/processed/delay_summary_by_destination.csv`
 
 ## Current limitations
 
-- The notebook still contains the richest exploratory analysis.
-- Dataset source and schema should be documented in more detail.
-- Business rules for delay thresholds should be moved from notebook cells into tested Python functions.
-- A SQL version of the main aggregations would strengthen the Engineering signal.
+- The original notebook still contains the richer exploratory analysis.
+- Dataset source and schema are not yet fully documented.
+- Delay business rules beyond the 120-minute threshold should be extracted from the notebook in future work.
+- This PR intentionally does not invent a production pipeline or claim model execution.
