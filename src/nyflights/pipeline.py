@@ -18,12 +18,11 @@ class DataValidationError(ValueError):
 
 @dataclass(frozen=True)
 class ProjectConfig:
-    """Configuration for a portfolio data pipeline."""
+    """Configuration for the NYC flights profiling pipeline."""
 
     project_name: str
     default_dataset: str
-    required_columns: tuple[str, ...] = ()
-    date_columns: tuple[str, ...] = ()
+    optional_domain_columns: tuple[str, ...] = ("dep_delay", "arr_delay", "dest", "carrier")
 
 
 CONFIG = ProjectConfig(
@@ -87,18 +86,42 @@ def numeric_summary(df: pd.DataFrame) -> pd.DataFrame:
     return numeric_df.describe().transpose().reset_index(names="column")
 
 
+def delay_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Return flight-delay aggregates when the nyflights columns are available."""
+    required = {"dest", "dep_delay"}
+    if not required.issubset(df.columns):
+        LOGGER.info("Skipping delay summary; missing optional columns: %s", sorted(required - set(df.columns)))
+        return pd.DataFrame()
+
+    summary = (
+        df.assign(is_long_dep_delay=df["dep_delay"] > 120)
+        .groupby("dest", dropna=False)
+        .agg(
+            flights=("dest", "size"),
+            avg_dep_delay=("dep_delay", "mean"),
+            long_dep_delay_rate=("is_long_dep_delay", "mean"),
+        )
+        .reset_index()
+        .sort_values(["long_dep_delay_rate", "flights"], ascending=[False, False])
+    )
+    return summary
+
+
 def run_pipeline(input_path: str | Path, output_dir: str | Path = "data/processed") -> dict[str, Any]:
-    """Run the reusable data-quality pipeline and write analysis artifacts."""
+    """Run local profiling and optional flight-delay summaries for an available dataset."""
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    df = load_dataset(input_path, required_columns=CONFIG.required_columns)
+    df = load_dataset(input_path)
     missing = missing_summary(df)
     numeric = numeric_summary(df)
     duplicates = duplicate_summary(df)
+    delays = delay_summary(df)
 
     missing.to_csv(output_path / "missing_summary.csv", index=False)
     numeric.to_csv(output_path / "numeric_summary.csv", index=False)
+    if not delays.empty:
+        delays.to_csv(output_path / "delay_summary_by_destination.csv", index=False)
     (output_path / "dataset_metrics.json").write_text(json.dumps(duplicates, indent=2), encoding="utf-8")
 
     LOGGER.info("Pipeline completed for %s", CONFIG.project_name)
